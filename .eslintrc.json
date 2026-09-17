@@ -1,0 +1,23 @@
+{
+  "root": true,
+  "env": {
+    "browser": true,
+    "node": true,
+    "jasmine": true
+  },
+  "globals": {
+    "angular": "readonly",
+    "gapi": "readonly",
+    "FB": "readonly",
+    "inject": "readonly"
+  },
+  "extends": "eslint:recommended",
+  "parserOptions": {
+    "ecmaVersion": 5,
+    "sourceType": "script"
+  },
+  "rules": {
+    "semi": ["error", "always"],
+    "no-unused-vars": ["error", { "args": "none" }]
+  }
+}
