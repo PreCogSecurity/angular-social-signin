@@ -5,9 +5,18 @@ angular.module('angular-social-signin', [])
 
     this.config = {};
     this.setConfig = function (config) {
+      if (!config || typeof config !== 'object') {
+        throw new Error('angularSocialSigninProvider.setConfig requires a config object');
+      }
+      if (!config.google || !config.google.id) {
+        throw new Error('angularSocialSigninProvider.setConfig requires config.google.id');
+      }
+      if (!config.facebook || !config.facebook.id) {
+        throw new Error('angularSocialSigninProvider.setConfig requires config.facebook.id');
+      }
       return this.config = config;
     };
-    this.$get = function ($window, $http, $q) {
+    this.$get = function ($window, $q) {
       var selfModule = this;
       function GoogleSignin() {
           var self = this;
@@ -29,7 +38,7 @@ angular.module('angular-social-signin', [])
                   });
 
               });
-          }; 
+          };
           (function(d) {
               var js, id = 'google-jssdk', ref = d.getElementsByTagName('script')[0];
               if (d.getElementById(id)) {
@@ -48,27 +57,42 @@ angular.module('angular-social-signin', [])
         auth2: {},
 
         signIn: function(params) {
-          return this.auth2.signIn();
+          if (!this.auth2 || typeof this.auth2.signIn !== 'function') {
+            return $q.reject(new Error('Google Sign-In SDK is not initialized yet'));
+          }
+          return this.auth2.signIn(params);
         },
 
         signOut: function() {
+          if (!this.auth2 || typeof this.auth2.signOut !== 'function') {
+            return $q.reject(new Error('Google Sign-In SDK is not initialized yet'));
+          }
           return this.auth2.signOut();
         },
-        
+
         grantAccess: function(params) {
-          return this.auth2.grantOfflineAccess();
+          if (!this.auth2 || typeof this.auth2.grantOfflineAccess !== 'function') {
+            return $q.reject(new Error('Google Sign-In SDK is not initialized yet'));
+          }
+          return this.auth2.grantOfflineAccess(params);
         },
 
         revokeAccess: function(params) {
-          return this.auth2.disconnect();
+          if (!this.auth2 || typeof this.auth2.disconnect !== 'function') {
+            return $q.reject(new Error('Google Sign-In SDK is not initialized yet'));
+          }
+          return this.auth2.disconnect(params);
         },
 
         getProfile: function() {
+          if (typeof gapi === 'undefined' || !gapi.client || !gapi.client.plus) {
+            return $q.reject(new Error('Google+ API is not loaded yet'));
+          }
           return gapi.client.plus.people.get({
             'userId': 'me'
           });
         }
-      }
+      };
 
       function FacebookSignin() {
         var self = this;
@@ -87,7 +111,7 @@ angular.module('angular-social-signin', [])
           FB.Event.subscribe('auth.authResponseChange', function(response) {
               self.auth2 = response;
           });
-        }; 
+        };
         ( function(d) {
             var js, id = 'facebook-jssdk', ref = d.getElementsByTagName('script')[0];
             if (d.getElementById(id)) {
@@ -106,33 +130,41 @@ angular.module('angular-social-signin', [])
         auth2: null,
 
         signIn: function() {
-          var defered = $q.defer();
+          var deferred = $q.defer();
           FB.login(function(response) {
-            defered.resolve(response);
+            if (response && response.status === 'connected') {
+              deferred.resolve(response);
+            } else {
+              deferred.reject(response);
+            }
           }, { scope: 'public_profile,email,user_friends' });
-          return defered.promise;  
+          return deferred.promise;
         },
 
         signOut: function() {
-          var defered = $q.defer();
+          var deferred = $q.defer();
           FB.logout(function(response) {
-              defered.resolve(response);
+              deferred.resolve(response);
           });
-          return defered.promise;
+          return deferred.promise;
         },
 
         getProfile: function() {
-          var defered = $q.defer();
+          var deferred = $q.defer();
           FB.api('/me', function(response) {
-            defered.resolve(response);
+            if (response && response.error) {
+              deferred.reject(response);
+            } else {
+              deferred.resolve(response);
+            }
           });
-          return defered.promise;
+          return deferred.promise;
         }
-      }
+      };
 
       return {
         google: new GoogleSignin(),
         facebook: new FacebookSignin()
-      }
+      };
     };
   });
